@@ -1,9 +1,10 @@
 # halloween_video_player_looper
 
-* usage: halloween_video_player_looper.py [-h] [-t] [-v VIDEO] [-s SLEEP] [-r]
+Plays videos in a loop using OMXPlayer.
 
-Video looper
 ```
+usage: halloween_video_player_looper.py [-h] [-t] [-v VIDEO] [-s SLEEP] [-r]
+
 optional arguments:
   -h, --help            show this help message and exit
   -t, --test            run in test mode 720 x 360
