@@ -181,14 +181,10 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--random", help="select a video at random", action="store_true")
     args = parser.parse_args()
 
-
     print("{} - Test mode:\t{}".format(current_time(), args.test))
     print("{} - Video clip:\t{}".format(current_time(), args.video))
     print("{} - Sleep time:\t{} minute(s)".format(current_time(), args.sleep))
     print("{} - Random clip:\t{}".format(current_time(), args.random))
-
-
-    # sys.exit(0)
 
     if args.video is not None:
         if os.path.isfile(args.video):
@@ -217,21 +213,3 @@ if __name__ == "__main__":
         print("{} - No video selected. Run 'python halloween_video_player_looper.py -h' for help".format(current_time()))
         print("{} - Exiting".format(current_time()))
         sys.exit()
-
-    """#random_video = random.choice(video_list)
-    # print(random_video)
-    # sys.exit()
-
-    # try:
-    #     video_dir = "video"
-    #     video_list = [os.path.join(os.path.abspath(video_dir), x) for x in os.listdir(video_dir)]
-    # except FileNotFoundError as e:
-    #     print("{} - {} - {}".format(current_time(), type(e), str(e)))
-    #     sys.exit()
-
-
-    #video_clip_path = os.path.join(video_dir, "Scared Skeletons - Portrait - 28s.mp4")
-    #video_clip_path = os.path.join(video_dir, "Skeleton Band - Portrait - 106s.mp4")
-    #video_clip_path = os.path.join(video_dir, "Skeletons Dancing - Portrait - 71s.mp4")"""
-
-    #single_video_player_looper(random.choice(video_list), sleep_minutes=0, test_mode=args.test)
