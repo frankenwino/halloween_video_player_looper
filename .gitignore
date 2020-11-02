@@ -106,3 +106,4 @@ venv.bak/
 # MP4 files
 .mp4
 halloween_video_player_looper/.DS_Store
+.DS_Store
