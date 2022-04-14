@@ -1,1 +1,8 @@
-python-magic
+dbus-python==1.2.18
+decorator==5.1.1
+evento==1.0.2
+omxplayer-wrapper==0.3.3
+pathlib2==2.3.7.post1
+pkg_resources==0.0.0
+python-magic==0.4.25
+six==1.16.0
