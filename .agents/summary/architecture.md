@@ -2,62 +2,48 @@
 
 ## Design Pattern
 
-Single-file procedural script. No classes, no service layers. Functions called sequentially from `if __name__ == "__main__"` block.
+Single-process application with an event-driven polling loop. VLC playback managed via `python-vlc` bindings. Video discovery and configuration separated for testability.
 
 ## System Architecture
 
 ```mermaid
 graph TB
-    subgraph CLI["CLI (argparse)"]
-        ARGS[Parse Arguments]
+    subgraph Entry["Entry Point (__main__.py)"]
+        CLI[CLI Args] --> CFG[load_config]
+        CFG --> LOG[Setup Logging]
     end
 
-    subgraph Logic["Application Logic"]
-        VD[Video Discovery<br/>python-magic MIME check]
-        PL[Playback Loop<br/>OMXPlayer D-Bus control]
+    subgraph Components["Application Components"]
+        DISC[Video Discovery<br/>python-magic]
+        VP[VideoPlayer<br/>python-vlc]
     end
 
-    subgraph Hardware["Hardware/System"]
-        OMX[OMXPlayer Process]
-        DBUS[D-Bus Daemon]
+    subgraph System["System Layer"]
+        VLC[VLC Process]
+        FS[Filesystem]
         HDMI[HDMI Display]
-        FS[Filesystem<br/>video/ directory]
     end
 
-    ARGS --> VD
-    ARGS --> PL
-    VD --> FS
-    PL --> OMX
-    OMX --> DBUS
-    OMX --> HDMI
+    LOG --> DISC
+    LOG --> VP
+    DISC --> FS
+    VP --> VLC
+    VLC --> HDMI
 ```
 
-## Execution Modes
+## Playback Loop
 
-| Mode | Flag | Behavior |
-|------|------|----------|
-| Specific video | `-v PATH` | Loop a single specified video file |
-| Random video | `-r` | Pick random video from `./video/` directory |
-| Test mode | `-t` | Windowed 720×360 instead of fullscreen |
-| Sleep between loops | `-s MINUTES` | Pause between loop iterations |
+VLC is instantiated once. The main thread polls `player.get_state()` to detect end-of-media, then optionally sleeps and replays:
 
-## Playback Loop Pattern
-
-OMXPlayer is instantiated once with `--loop` flag, then controlled via D-Bus:
-1. `player.pause()` — start paused
-2. `player.play()` — begin playback
-3. `sleep(player.duration())` — wait for video to finish
-4. `player.pause()` — pause at end
-5. `player.set_position(0.0)` — seek to start
-6. Optional sleep between loops
-7. Repeat
-
-This avoids OMXPlayer process restart overhead between loops.
+1. `set_media(media)` → `play()`
+2. Poll until `State.Ended`
+3. `stop()` → optional `sleep(seconds)`
+4. Repeat from 1
 
 ## Key Design Decisions
 
-- **MIME-based file detection** — uses libmagic rather than file extensions for video identification
-- **OMXPlayer with D-Bus** — hardware-accelerated video on Pi, controlled programmatically
-- **CWD-relative video path** — `os.path.abspath("video")` resolves from current working directory
-- **Orientation hardcoded to 180°** — display mounted upside-down in production mode
-- **Fatal errors use `sys.exit()`** — no exception propagation
+- **VLC replaces OMXPlayer** — works on all Pi OS versions, not just Buster
+- **MIME-based detection** — python-magic (libmagic) not file extensions
+- **CLI overrides config** — TOML provides defaults, flags override at runtime
+- **Lazy VLC import** — catches ImportError/OSError for clear error message
+- **Package-relative video dir** — `Path(__file__).parent / "video"` not CWD

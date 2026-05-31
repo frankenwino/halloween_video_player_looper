@@ -1,51 +1,51 @@
 # Components
 
-## Main Module (`app/halloween_video_player_looper.py`)
+## Config (`config.py`)
 
-### `current_time()`
-Returns formatted datetime string (`%Y-%m-%d %H:%M:%S`). Used for log-style print output.
+- `Config` dataclass: video_dir, video_path, random_mode, sleep_seconds, fullscreen, window dimensions, orientation, log_level
+- `load_config(path, cli_overrides)`: TOML parsing + CLI merge
+- `_validate()`: orientation in (0,90,180,270), sleep ≥ 0
 
-### `file_magic(file_path)`
-Returns `(file_type, mime_type)` tuple using `python-magic` (libmagic wrapper).
+## Discovery (`discovery.py`)
 
-### `is_video(file_path)`
-Returns `True` if the file's MIME type contains "video".
+- `is_video(path)`: MIME check via python-magic
+- `discover_videos(video_dir)`: recursive walk, filter videos, fatal if empty/missing
 
-### `generate_video_list(video_dir)`
-Walks a directory tree, filters for video files using MIME detection. Returns list of video file paths. Exits fatally if directory missing or no videos found.
+## VideoPlayer (`player.py`)
 
-**Default video_dir**: `os.path.abspath("video")` — relative to CWD, not package.
+- `__init__`: create VLC instance, configure fullscreen/orientation
+- `play_loop(video_path, sleep_seconds)`: play → poll for end → sleep → repeat
+- `stop()`: stop player, release VLC resources
+- Handles VLC unavailability with clear error
 
-### `single_video_player_looper(video_clip_path, sleep_minutes, test_mode)`
-Core playback loop. Instantiates OMXPlayer once, then loops:
-- play → sleep(duration) → pause → seek(0) → optional sleep → repeat
-- Handles `KeyboardInterrupt` for graceful exit
-- Test mode: 720×360 window; Production: fullscreen, 180° rotation, fill aspect
+## Entry Point (`__main__.py`)
 
-### `__main__` block
-Parses CLI args, validates input, dispatches to `single_video_player_looper()`.
-
-## Orphaned Utility (`app/video_duration.py`)
-
-### `video_dir()`
-Returns path to `video/` subdirectory relative to the script file.
-
-### `video_duration_ffprobe(file_path)`
-Calls `ffprobe` subprocess to get video duration in seconds. Returns string.
-
-**Note**: This module is never imported by the main application. It appears to be a standalone development utility.
+- Parse CLI → load config → setup logging → select video → create player → run loop
+- Video selection: specific path > random from directory
+- KeyboardInterrupt → player.stop()
 
 ## Component Relationships
 
 ```mermaid
-graph LR
-    MAIN["__main__ block"] --> GVL[generate_video_list]
-    MAIN --> SVPL[single_video_player_looper]
-    MAIN --> IV[is_video]
-    GVL --> IV
-    IV --> FM[file_magic]
-    FM --> MAGIC[python-magic]
-    SVPL --> OMX[OMXPlayer]
+classDiagram
+    class Config {
+        +Path video_dir
+        +Path video_path
+        +float sleep_seconds
+        +bool fullscreen
+        +int orientation
+    }
 
-    VD["video_duration.py"] -.->|orphaned| FFPROBE[ffprobe]
+    class VideoPlayer {
+        +play_loop(path, sleep)
+        +stop()
+    }
+
+    class Discovery {
+        +is_video(path) bool
+        +discover_videos(dir) list
+    }
+
+    VideoPlayer --> Config
+    Discovery --> Config
 ```

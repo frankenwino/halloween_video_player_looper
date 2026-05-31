@@ -2,56 +2,59 @@
 
 ## Project Identity
 
-- **Name**: halloween_video_player_looper
-- **Version**: 0.1.0
-- **License**: GNU General Public License v3
-- **Python**: Targets 2.7 and 3.5–3.8 (declared), actually requires Python 3 (f-strings in video_duration.py)
+- **Name**: halloween-video-looper
+- **Version**: 0.2.0
+- **License**: GPL-3.0-or-later
+- **Python**: ≥3.11
 - **Author**: Andy Browne
 
 ## Technology Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python (mixed 2/3 compatibility issues) |
-| Video playback | OMXPlayer via `omxplayer-wrapper` (D-Bus) |
-| File detection | `python-magic` (libmagic) |
-| D-Bus | `dbus-python` |
-| CLI | argparse (stdlib) |
-| Build | setuptools (legacy setup.py) |
-| Testing | tox + unittest (placeholder only) |
+| Language | Python 3.11+ |
+| Video playback | VLC via `python-vlc` |
+| File detection | `python-magic` (libmagic MIME) |
+| Configuration | `tomllib` (stdlib) |
+| CLI | `argparse` (stdlib) |
+| Logging | `logging` (stdlib) |
+| Build | hatchling |
+| Testing | pytest, pytest-cov, pytest-mock |
 
 ## Directory Structure
 
 ```
 halloween_video_player_looper/
-├── app/                           # Application code
-│   ├── halloween_video_player_looper.py  # Main module (CLI + logic)
-│   ├── video_duration.py          # Orphaned ffprobe utility
-│   ├── __init__.py                # Package metadata
-│   └── video/                     # Default video directory
-│       └── Graveyard - Landscape - 16s.mp4
-├── tests/                         # Placeholder tests (no assertions)
-├── docs/                          # Sphinx documentation stubs
-├── setup.py                       # Legacy packaging (broken package discovery)
-├── setup.cfg                      # bump2version + flake8 config
-├── tox.ini                        # Multi-version test config
-├── Makefile                       # Cookiecutter targets
-├── requirements.txt               # Runtime dependencies
-├── README.md                      # Brief project description
-├── README.rst                     # Cookiecutter template README
-└── AGENTS.md                      # AI assistant context
+├── halloween_video_player_looper/   # Application package
+│   ├── __init__.py                  # Version metadata
+│   ├── __main__.py                  # CLI entry point
+│   ├── config.py                    # Config dataclass + TOML loading
+│   ├── discovery.py                 # Video file discovery (python-magic)
+│   ├── player.py                    # VideoPlayer (VLC wrapper)
+│   └── video/                       # Bundled sample video
+├── tests/                           # pytest suite
+│   ├── conftest.py                  # Shared fixtures + mocks
+│   ├── test_config.py              
+│   ├── test_discovery.py           
+│   ├── test_player.py             
+│   └── test_integration.py        
+├── pyproject.toml                   # Project metadata + build config
+├── config.example.toml              # Example configuration
+├── README.md                        # User documentation
+├── AGENTS.md                        # AI assistant context
+└── LICENSE                          # GPL-3.0
 ```
 
 ## Entry Points
 
 | Entry Point | Location | Purpose |
 |-------------|----------|---------|
-| Direct execution | `python app/halloween_video_player_looper.py` | Run from repo root |
-| CLI arguments | `-v VIDEO`, `-r`, `-s SLEEP`, `-t` | Video selection and playback options |
+| CLI command | `halloween-video-looper` | Installed script |
+| Module execution | `python -m halloween_video_player_looper` | Direct invocation |
+| Function | `halloween_video_player_looper.__main__:main` | Programmatic entry |
 
 ## Target Platform
 
-- Raspberry Pi (any model with HDMI output)
-- Raspberry Pi OS **Buster or earlier** (OMXPlayer removed in Bullseye)
+- Raspberry Pi (any model with HDMI) or Linux desktop
+- VLC installed system-wide (`apt install vlc`)
 - HDMI-connected display
-- D-Bus daemon running

@@ -4,66 +4,49 @@
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant CLI as argparse
-    participant APP as Main Logic
-    participant OMX as OMXPlayer
+    participant CLI as __main__
+    participant CFG as Config
+    participant DISC as Discovery
+    participant VP as VideoPlayer
 
-    U->>CLI: python app/halloween_video_player_looper.py [flags]
-    CLI->>APP: Parsed args (video, random, sleep, test)
-    
-    alt -v VIDEO specified
-        APP->>APP: Validate file exists and is video
-        APP->>OMX: single_video_player_looper(path)
-    else -r random
-        APP->>APP: generate_video_list()
-        APP->>APP: random.choice(video_list)
-        APP->>OMX: single_video_player_looper(random_path)
-    else neither
-        APP->>U: Print help, exit
+    CLI->>CFG: load_config(args.config, cli_overrides)
+    CFG-->>CLI: Config instance
+    CLI->>CLI: _setup_logging()
+    CLI->>CLI: _select_video(config)
+    alt config.video_path set
+        CLI->>CLI: Validate file exists + is video
+    else
+        CLI->>DISC: discover_videos(config.video_dir)
+        DISC-->>CLI: list[Path]
+        CLI->>CLI: random.choice(videos)
     end
+    CLI->>VP: VideoPlayer(fullscreen, window_size, orientation)
+    CLI->>VP: play_loop(video, sleep_seconds)
 ```
 
 ## Playback Loop
 
 ```mermaid
 sequenceDiagram
-    participant APP as App
-    participant OMX as OMXPlayer
+    participant VP as VideoPlayer
+    participant VLC as VLC Process
     participant HDMI as Display
 
-    APP->>OMX: OMXPlayer(path, args)
-    APP->>OMX: pause()
-    
     loop Forever
-        APP->>OMX: play()
-        OMX->>HDMI: Video output
-        APP->>APP: sleep(duration)
-        APP->>OMX: pause()
-        APP->>OMX: set_position(0.0)
-        
-        opt sleep_minutes > 0
-            APP->>APP: sleep(60 * sleep_minutes)
+        VP->>VLC: set_media + play()
+        VLC->>HDMI: Video output
+        VP->>VP: Poll get_state() every 0.5s
+        Note over VP: Until State.Ended
+        VP->>VLC: stop()
+        opt sleep_seconds > 0
+            VP->>VP: time.sleep(sleep_seconds)
         end
     end
 
-    Note over APP: KeyboardInterrupt
-    APP->>OMX: quit()
-    APP->>APP: sys.exit()
+    Note over VP: KeyboardInterrupt
+    VP->>VLC: stop() + release()
 ```
-
-## Video Discovery
-
-1. Resolve video directory (CWD-relative `./video/`)
-2. Check directory exists → fatal exit if not
-3. Walk directory tree recursively
-4. For each file: check MIME type via libmagic
-5. Collect files where MIME contains "video"
-6. Fatal exit if list is empty
-7. Return list of video paths
 
 ## Shutdown
 
-Only mechanism: `KeyboardInterrupt` (Ctrl+C)
-- Calls `player.quit()` to terminate OMXPlayer process
-- Calls `sys.exit()`
+`KeyboardInterrupt` caught in `__main__.main()` → calls `player.stop()` which stops playback and releases VLC instance.

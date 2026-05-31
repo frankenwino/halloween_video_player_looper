@@ -1,69 +1,73 @@
 # AGENTS.md
 
-<!-- tags: navigation, architecture, conventions, gotchas -->
+<!-- tags: navigation, architecture, conventions -->
 
 ## Project Overview
 
-Raspberry Pi video looper for Halloween displays. Loops video files using OMXPlayer (D-Bus control). Single-file procedural Python script with argparse CLI.
+Raspberry Pi video looper for Halloween displays. Loops video files fullscreen using VLC (`python-vlc`). Python 3.11+ with TOML config and CLI overrides.
 
-**Critical**: OMXPlayer was removed from Pi OS Bullseye (2021). This app only works on Pi OS Buster or earlier.
-
-**Entry point**: `python app/halloween_video_player_looper.py [flags]`
+**Entry point**: `halloween_video_player_looper/__main__.py` → `main()`
+**CLI**: `halloween-video-looper [--config PATH] [-v VIDEO] [-r] [-s SLEEP] [-t] [-d DIR]`
 
 ## Directory Map
 
 ```
-app/                              # ALL application code
-├── halloween_video_player_looper.py  # Main: CLI + video discovery + playback loop
-├── video_duration.py             # Orphaned ffprobe utility (never imported)
-├── __init__.py                   # Package metadata
-└── video/                        # Default video directory (1 sample MP4)
-tests/                            # Placeholder stubs (no real tests)
-docs/                             # Sphinx stubs
+halloween_video_player_looper/   # Application package
+├── __main__.py                  # Entry: args → config → select video → player → loop
+├── config.py                    # Config dataclass + TOML loading + CLI merge
+├── discovery.py                 # Video discovery via python-magic MIME detection
+├── player.py                    # VideoPlayer: VLC wrapper with loop + orientation
+└── video/                       # Bundled sample video
+tests/                           # pytest suite (26 tests, 92% coverage)
+├── conftest.py                  # Shared fixtures + VLC/magic mocks
+├── test_config.py
+├── test_discovery.py
+├── test_player.py
+└── test_integration.py
 ```
 
 ## Key Entry Points
 
 | What | Where |
 |------|-------|
-| Main application | `app/halloween_video_player_looper.py` (direct execution) |
-| CLI flags | `-v VIDEO`, `-r` (random), `-s SLEEP` (minutes), `-t` (test/windowed) |
-| Video directory | `./video/` relative to CWD (not package) |
+| Application | `halloween_video_player_looper/__main__.py` |
+| Configuration | `halloween_video_player_looper/config.py` → `Config` dataclass |
+| Video discovery | `halloween_video_player_looper/discovery.py` → `discover_videos()` |
+| Playback | `halloween_video_player_looper/player.py` → `VideoPlayer.play_loop()` |
+| Example config | `config.example.toml` |
 
 ## Architecture
 
-Procedural script — no classes. Functions called from `if __name__ == "__main__"`:
-1. Parse args → validate → discover videos → launch OMXPlayer
-2. Playback loop: `play()` → `sleep(duration)` → `pause()` → `seek(0)` → repeat
-3. Single OMXPlayer instance reused (avoids process restart overhead)
+1. Parse CLI args → load TOML config → merge (CLI overrides TOML)
+2. Select video: specific path (`-v`) or random from directory
+3. Create VLC player with fullscreen/orientation settings
+4. Loop: `play()` → poll `get_state()` until Ended → `stop()` → sleep → repeat
+5. `KeyboardInterrupt` → `player.stop()` (releases VLC)
 
-## Known Bugs and Gotchas
-
-<!-- tags: bugs, gotchas -->
-
-- **OMXPlayer is dead**: Removed from Pi OS Bullseye+. App cannot run on modern Pi OS.
-- **Package structure broken**: `setup.py` uses `find_packages(include=['halloween_video_player_looper'])` but code is in `app/`. pip install won't work.
-- **Error message bug**: Line ~170 `format(args.video)` — missing `current_time()` as first positional arg.
-- **CWD-dependent paths**: `os.path.abspath("video")` resolves from wherever you run the script, not from the package location.
-- **Python version mismatch**: Declares 2.7 support but `video_duration.py` uses f-strings (3.6+).
-- **Hardcoded display settings**: 180° orientation, 720×360 test window — no config file.
-- **No error handling**: OMXPlayer D-Bus failures produce unhelpful tracebacks.
-
-## Dependencies
-
-**Runtime** (requirements.txt):
-- `omxplayer-wrapper` — OMXPlayer D-Bus bindings (deprecated)
-- `python-magic` — libmagic MIME detection
-- `dbus-python` — D-Bus communication
-
-**System binaries**: `omxplayer` (deprecated), `libmagic1`, D-Bus daemon
+No threading — VLC handles playback internally, main thread polls state.
 
 ## Patterns That Deviate from Defaults
 
-- MIME-based video detection via libmagic (not file extensions)
-- OMXPlayer controlled via D-Bus (not subprocess stdin/stdout)
-- Display orientation hardcoded to 180° (mounted upside-down)
-- `sys.exit()` for all error paths (no exceptions, no return codes)
+- **Lazy VLC import** in `player.py` — catches ImportError at module level for clear error if VLC missing
+- **CLI overrides config** — non-None CLI values replace TOML values via dict merge
+- **MIME-based video detection** — python-magic (libmagic), not file extensions
+- **Package-relative video dir** — `Path(__file__).parent / "video"` not CWD
+- **Orientation via VLC transform filter** — `--video-filter=transform`
+
+## Error Handling
+
+| Scenario | Result |
+|----------|--------|
+| VLC not installed | CRITICAL, exit |
+| No videos found | CRITICAL, exit |
+| Video dir missing | CRITICAL, exit |
+| Specified file not video | CRITICAL, exit |
+| Invalid TOML | ERROR, exit |
+| VLC playback error | ERROR, break loop |
+
+## Testing
+
+All VLC and python-magic mocked at `sys.modules` level. Tests run anywhere without VLC or display.
 
 ## Detailed Documentation
 

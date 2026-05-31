@@ -1,51 +1,44 @@
 # Dependencies
 
-## Runtime Dependencies (requirements.txt)
+## Runtime Dependencies
 
 | Package | Purpose | Used By |
 |---------|---------|---------|
-| `omxplayer-wrapper` | OMXPlayer D-Bus control | `single_video_player_looper()` |
-| `python-magic` | File MIME type detection | `file_magic()` |
-| `dbus-python` | D-Bus communication (omxplayer-wrapper dep) | Indirect |
+| `python-vlc` | VLC media player bindings | `player.py` |
+| `python-magic` | MIME type detection via libmagic | `discovery.py` |
 
 ## Standard Library Usage
 
 | Module | Purpose | Used By |
 |--------|---------|---------|
-| `argparse` | CLI argument parsing | `__main__` block |
-| `os` | Path manipulation, file checks | Multiple functions |
-| `sys` | Fatal exit | Multiple functions |
-| `random` | Random video selection | `__main__` block |
-| `datetime` | Timestamp formatting | `current_time()` |
-| `time.sleep` | Playback timing + cooldown | `single_video_player_looper()` |
-| `subprocess` | ffprobe execution | `video_duration.py` (orphaned) |
-| `json` | ffprobe output parsing | `video_duration.py` (orphaned) |
+| `tomllib` | TOML config parsing | `config.py` |
+| `argparse` | CLI argument parsing | `__main__.py` |
+| `logging` | Structured logging | All modules |
+| `dataclasses` | Config data structure | `config.py` |
+| `pathlib` | File path handling | All modules |
+| `random` | Video selection | `__main__.py` |
+| `time` | Playback polling + sleep | `player.py` |
+| `sys` | Fatal exit | Multiple |
 
 ## System Dependencies
 
-| Binary/Library | Required By | Notes |
-|----------------|-------------|-------|
-| `omxplayer` | omxplayer-wrapper | **Deprecated** — removed from Pi OS Bullseye+ |
-| `libmagic1` | python-magic | System library for MIME detection |
-| `ffprobe` (FFmpeg) | video_duration.py | Only for orphaned utility |
-| D-Bus daemon | omxplayer-wrapper | Must be running |
+| Requirement | Notes |
+|-------------|-------|
+| VLC (`apt install vlc`) | Required — python-vlc binds to system VLC |
+| `libmagic1` | Required by python-magic |
+| HDMI display | For video output |
 
 ## Dependency Graph
 
 ```mermaid
 graph TD
-    APP[halloween_video_player_looper] --> OW[omxplayer-wrapper]
+    APP[halloween-video-looper] --> PV[python-vlc]
     APP --> PM[python-magic]
-    OW --> DP[dbus-python]
-    OW --> OMX[omxplayer binary]
+    APP --> STD[Python 3.11+ stdlib]
+
+    PV --> VLC[VLC system binary]
     PM --> LM[libmagic1]
-    DP --> DBUS[D-Bus daemon]
-
-    VDU[video_duration.py] -.-> FFP[ffprobe]
+    STD --> TL[tomllib]
+    STD --> AP[argparse]
+    STD --> LG[logging]
 ```
-
-## Platform Constraints
-
-- **OMXPlayer**: Only available on Raspberry Pi OS Buster and earlier. Removed in Bullseye (2021). No replacement provided by omxplayer-wrapper.
-- **dbus-python**: Requires system D-Bus libraries (`libdbus-1-dev`, `libglib2.0-dev`)
-- **python-magic**: Requires `libmagic1` system package (not the PyPI `magic` package — naming conflict)
