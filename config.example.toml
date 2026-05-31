@@ -1,0 +1,16 @@
+# Halloween Video Looper Configuration
+# All values shown are defaults — only include what you want to override.
+
+[video]
+# directory = "/home/pi/halloween-videos"
+# path = "/path/to/specific/video.mp4"  # Overrides directory + random
+
+[playback]
+sleep_seconds = 0
+fullscreen = true
+window_width = 720
+window_height = 480
+orientation = 0          # 0, 90, 180, 270
+
+[app]
+log_level = "INFO"

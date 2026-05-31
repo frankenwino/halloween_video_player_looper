@@ -103,6 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# Specs (local development docs)
+specs/
+
 # MP4 files
 .mp4
 halloween_video_player_looper/.DS_Store

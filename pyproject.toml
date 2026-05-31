@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "halloween-video-looper"
+version = "0.2.0"
+description = "Loops video files on a Raspberry Pi for Halloween displays"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+authors = [{name = "Andy Browne", email = "andy.maildrop@gmail.com"}]
+keywords = ["raspberry-pi", "halloween", "video", "looper", "vlc"]
+dependencies = [
+    "python-vlc",
+    "python-magic",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+[project.scripts]
+halloween-video-looper = "halloween_video_player_looper.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["halloween_video_player_looper"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["halloween_video_player_looper"]
+omit = ["halloween_video_player_looper/__main__.py"]
